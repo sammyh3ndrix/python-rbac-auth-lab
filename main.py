@@ -1,5 +1,6 @@
 import secrets
 import bcrypt
+from datetime import datetime, timezone
 
 
 print("Welcome to login system fn")
@@ -83,40 +84,45 @@ def password_reset(current_user):
     else:
         print("user not found  fn")
 def rename_user(current_user):
-    print("heres a list of elgibe users you can chnage names of")
-    for key in users:
-        if key == current_user or users[key]["role"] != "root":
-            print(key)
-    target_user_rename = input("Sup fn whos username would you like to change")
-    if target_user_rename in users:
-        allowed = False
-        if users[current_user]["role"] == "root":
-            if users[target_user_rename]["role"] != "root" or target_user_rename == current_user:
-                allowed = True
-        elif users[current_user]["role"] == "admin":
-            if users[target_user_rename]["role"] == "user"or target_user_rename == current_user :
-                allowed = True
-        if allowed:
-            rename_change = input("What would you like to rename the user too")
-            if rename_change in users:
-                print("cant use that bruh choose again")
-            else:
-                confirm_name = input(f"Confirm name change {rename_change} y / n: ")
-                if confirm_name == "y":
-                    users[rename_change] = users[target_user_rename] 
-                    del users[target_user_rename]
-                    if target_user_rename == current_user:
-                        return rename_change
-                    else:
-                        return current_user
-                return current_user
-                        
+    if users[current_user]["role"] == "user":
+        target_user_rename = current_user 
+        allowed = True
+    else: 
+        print("heres a list of elgibe users you can change names of")
+        for key in users:
+            if key == current_user or users[key]["role"] != "root":
+                print(key)
+        target_user_rename = input("Sup fn whos username would you like to change")
+        if target_user_rename in users:
+            allowed = False
+            if users[current_user]["role"] == "root":
+                if users[target_user_rename]["role"] != "root" or target_user_rename == current_user:
+                    allowed = True
+            elif users[current_user]["role"] == "admin":
+                if users[target_user_rename]["role"] == "user"or target_user_rename == current_user :
+                    allowed = True
         else:
-            print("Permission denied")
-
-
+            print("User not found")
+            return current_user
+    if allowed:
+        rename_change = input("What would you like to rename the user too")
+        if rename_change in users:
+            print("cant use that bruh choose again")
+        else:
+            confirm_name = input(f"Confirm name change {rename_change} y / n: ")
+            if confirm_name == "y":
+                users[rename_change] = users[target_user_rename] 
+                del users[target_user_rename]
+                if target_user_rename == current_user:
+                    return rename_change
+                else:
+                    return current_user
+            return current_user
+                            
     else:
-        print("User not found")
+        print("Permission denied")
+
+
     return current_user
 def view_locked_users():
 
@@ -196,6 +202,29 @@ def verify_password(entered_password, stored_hash):
         byte_data,
         stored_hash
     )
+def change_own_password(current_user):
+    while True:
+        self_passwd_chnge = input("Plz enter your new password fn: ")
+        if validate_password(self_passwd_chnge):
+            renter_confirm = input("Thank you now plz renter to cofirm")
+            if renter_confirm == self_passwd_chnge:
+                users[current_user]["password"] = password_hash(self_passwd_chnge)
+                print("Congrats password has been chnaged")
+                return True
+            else:
+                print("password dont match")
+
+        else:
+            print("Requierments changed bruh and that new password dosnet fulfill shit ")
+def view_account_status(current_user):
+    print(f"Account locked: {users[current_user]['locked']}")
+    print(f"Failed attempts: {users[current_user]['attempts']}")
+    print(f"Last login: {users[current_user]['last_login']}")
+
+
+
+
+
 
 
      
@@ -223,11 +252,11 @@ while True:
                         "password" : password_hash(password_new),
                         "attempts" : 0,
                         "locked" : False,
-                        "role" : "user"
+                        "role" : "user",
+                        "last_login" : None
                     }
 
-                    for key in users:
-                        print(key)
+                    print(f"Account {username_new} created succesfully")
                     break
 
                 else:
@@ -252,6 +281,10 @@ while True:
                     print("sucess")
                     users[iinput]["attempts"] = 0
                     logged_in = True
+
+                    users[iinput]["last_login"] = datetime.now(timezone.utc).isoformat()
+
+
 
                     if users[iinput]["role"] == "root":
                         print("Welcome Root USer")
@@ -318,11 +351,44 @@ while True:
                     elif users[iinput]["role"] == "user":
                         print("user acces get your money up")
 
+
+                        while True:
+                            print("Welcome User ")
+                            print("1. View my profile: ")
+                            print("2. Change my Password: ")
+                            print("3. Rename my account: ")
+                            print("4. View Login / Account status: ")
+                            print("5. Logout: ")
+
+
+                            user_choice = input("Pick an option fn: ")
+
+                            if user_choice == "1":
+                                 print(f"Username | {iinput}")
+                                 print(f"Role | {users[iinput]['role']}")
+
+                            elif user_choice == "2":
+                                change_own_password(iinput)
+
+                            elif user_choice == "3":
+                                iinput = rename_user(iinput)
+
+                            elif user_choice == "4":
+                                view_account_status(iinput)
+
+
+                            elif user_choice == "5":
+                                logged_in = False
+                                break
+                    
+
+
                     break
 
                 else:
                     users[iinput]["attempts"] += 1
                     print("failure try again fn")
+                    print(f"you have this many attempts left {max_retries - users[iinput]['attempts']}")
 
             if logged_in == False and users[iinput]["attempts"] == max_retries:
                 print("Your account is locked fn contact an admin bruh")
