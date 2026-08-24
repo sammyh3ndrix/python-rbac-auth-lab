@@ -11,11 +11,14 @@ logged_in = False
 users = {
 
 "sammy" : {
-            "password" : "hello123",
+            "password" : "Hello@123",
             "attempts" : 0,
             "locked" : False,
-            "role" : "root"
+            "role" : "root",
+            "last_login" : None
         }
+
+
 
     }
 
@@ -74,9 +77,18 @@ def password_reset(current_user):
         if allowed:
             reset_logic = input("youre about to reset a users password would you like to proceed or nahh y / n: ")
             if reset_logic == "y":
-                print("what would you like to change it too")
-                users[target_password_reset]["password"] = input()
-                print("Nice the password is now changed")
+                while True: 
+                    admin_passwd_change = input("what would you like to change it too")
+                    if validate_password(admin_passwd_change):
+                        confirm_admin_passwd_change = input("Nice now plz renter")
+                        if confirm_admin_passwd_change == admin_passwd_change:
+                            users[target_password_reset]["password"] = password_hash(admin_passwd_change)
+                            print("Password is now chnaged")
+                            break
+                        else:
+                            print("passwords do not match, try again")
+                    else:
+                        print("requiements failed")         
             else:
                 print("reset canceled  fn")
         else:
@@ -196,6 +208,9 @@ def password_hash(password):
     salt = bcrypt.gensalt()
     hashed_password = bcrypt.hashpw(bytes_data, salt)
     return hashed_password
+
+users["sammy"]["password"] = password_hash(users["sammy"]["password"])
+
 def verify_password(entered_password, stored_hash):
     byte_data = bytes(entered_password, encoding= 'utf-8')
     return bcrypt.checkpw(
@@ -222,12 +237,6 @@ def view_account_status(current_user):
     print(f"Last login: {users[current_user]['last_login']}")
 
 
-
-
-
-
-
-     
                     
 while True:
     print ("1. Create Account: ")
@@ -297,7 +306,8 @@ while True:
                             print("4. Delete user: ")
                             print("5. Rename User: ")
                             print("6. Change User Role: ")
-                            print("7. Logout: ")
+                            print("7. Reset User Password: ")
+                            print("8. Logout: ")
 
                             root_choice = input("Choose a root option fn: ")
 
@@ -314,6 +324,8 @@ while True:
                             elif root_choice == "6":
                                 change_user_role()
                             elif root_choice == "7":
+                                password_reset(iinput)
+                            elif root_choice == "8":
                                 logged_in = False
                                 break
 
@@ -380,8 +392,6 @@ while True:
                             elif user_choice == "5":
                                 logged_in = False
                                 break
-                    
-
 
                     break
 
