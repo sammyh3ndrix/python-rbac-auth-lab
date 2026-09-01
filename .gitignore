@@ -1,3 +1,6 @@
 .venv/
 __pycache__/
 *.pyc
+users.json
+test_users.json
+.pytest_cache/

@@ -1,6 +1,8 @@
 import secrets
 import bcrypt
 from datetime import datetime, timezone
+import json
+import copy
 
 
 print("Welcome to login system fn")
@@ -8,7 +10,7 @@ print("Welcome to login system fn")
 max_retries = 3
 logged_in = False
 
-users = {
+default_users = {
 
 "sammy" : {
             "password" : "Hello@123",
@@ -48,6 +50,7 @@ def lock_unlock_user(current_user):
                 status_change = input("Do u wanna lock this user y / n : ")
                 if status_change == "y":
                     users[target_user_unlock]['locked'] = True
+                    save_users(users)
                     print("this user is now officialy locked")
                 else:
                     print("aint ***** change bruh")
@@ -56,6 +59,7 @@ def lock_unlock_user(current_user):
                 if status_change == "y":
                     users[target_user_unlock]['locked'] = False
                     users[target_user_unlock]['attempts'] = 0
+                    save_users(users)
                     print ("This user officially unlocked and attempts are reset now kick rocks")
                 else:
                     print("aint ***** change bruh")
@@ -83,6 +87,7 @@ def password_reset(current_user):
                         confirm_admin_passwd_change = input("Nice now plz renter")
                         if confirm_admin_passwd_change == admin_passwd_change:
                             users[target_password_reset]["password"] = password_hash(admin_passwd_change)
+                            save_users(users)
                             print("Password is now chnaged")
                             break
                         else:
@@ -125,6 +130,7 @@ def rename_user(current_user):
             if confirm_name == "y":
                 users[rename_change] = users[target_user_rename] 
                 del users[target_user_rename]
+                save_users(users)
                 if target_user_rename == current_user:
                     return rename_change
                 else:
@@ -155,6 +161,7 @@ def delete_user():
             confirm_user_delete = input(f"are you sure you would like to delete{delete_target_user} Y / N: ")
             if confirm_user_delete == "Y":
                 del users[delete_target_user]
+                save_users(users)
                 print(f"user{delete_target_user} is succeffuly gone")
             else:
                 print("canceled operation")
@@ -187,6 +194,7 @@ def change_user_role():
                             print("canceling make up your mind next time fn")
                     elif confirm_role_change == "y":
                             users[change_user_target_role]["role"] = new_roles
+                            save_users(users)
         else:
                 print("My brother in Christ you CANNOT modify another root user role")
     else:
@@ -209,7 +217,7 @@ def password_hash(password):
     hashed_password = bcrypt.hashpw(bytes_data, salt)
     return hashed_password
 
-users["sammy"]["password"] = password_hash(users["sammy"]["password"])
+default_users["sammy"]["password"] = password_hash(default_users["sammy"]["password"])
 
 def verify_password(entered_password, stored_hash):
     byte_data = bytes(entered_password, encoding= 'utf-8')
@@ -224,6 +232,7 @@ def change_own_password(current_user):
             renter_confirm = input("Thank you now plz renter to cofirm")
             if renter_confirm == self_passwd_chnge:
                 users[current_user]["password"] = password_hash(self_passwd_chnge)
+                save_users(users)
                 print("Congrats password has been chnaged")
                 return True
             else:
@@ -235,180 +244,211 @@ def view_account_status(current_user):
     print(f"Account locked: {users[current_user]['locked']}")
     print(f"Failed attempts: {users[current_user]['attempts']}")
     print(f"Last login: {users[current_user]['last_login']}")
+def save_users(user_data, file_name="users.json"):
+    user_profile_copy = copy.deepcopy(user_data)
+    for key in user_profile_copy:
+        if isinstance (user_profile_copy[key]["password"], bytes):
+            user_profile_copy[key]["password"] = user_profile_copy[key]["password"].decode('utf-8')
+    with open(file_name, "w") as json_file_copy:
+       json.dump(user_profile_copy, json_file_copy)
+def load_users(file_name = "users.json"):
+    try:
+        with open(file_name, "r") as json_read_copy:
+            json_load = json.load(json_read_copy)
+            for key in json_load:
+                if isinstance(json_load[key]["password"], str):
+                    json_load[key]["password"] = json_load[key]["password"].encode('utf-8')
+            return json_load
+    except FileNotFoundError:
+        return default_users
 
 
-                    
-while True:
-    print ("1. Create Account: ")
-    print ("2. Login: ")
-    print ("3. Quit: ")
 
-    choice = input("Choose an option: ")
-
-    if choice == "1":
-
-        username_new = input("Create a username fn: ")
-
-        if username_new in users:
-            print ("thats an invalid name u cant use it")
-        else:
-            
-            print ("thats allowed proceed fn")
-            while True:
-                password_new = input("Now create a password fn: ")
-                if validate_password(password_new):
-                    users[username_new] = {
-                        "password" : password_hash(password_new),
-                        "attempts" : 0,
-                        "locked" : False,
-                        "role" : "user",
-                        "last_login" : None
-                    }
-
-                    print(f"Account {username_new} created succesfully")
-                    break
-
-                else:
-                    print("Password reuqiemrents failed")
+    
+users = load_users()
                 
-            
-    elif choice == "2":
-        logged_in = False
-
-        iinput = input("Hi plz enter your username to continue: ")
-        if iinput in users:
-
-            if users[iinput]["locked"]:
-                print("account locked lil bruh")
-                continue
-
-            while users[iinput]["attempts"] < max_retries:
-                entered_password = input("Awesome now enter your password: ")
-                stored_hash = users[iinput]["password"]
-
-                if verify_password(entered_password, stored_hash):
-                    print("sucess")
-                    users[iinput]["attempts"] = 0
-                    logged_in = True
-
-                    users[iinput]["last_login"] = datetime.now(timezone.utc).isoformat()
 
 
+    
 
-                    if users[iinput]["role"] == "root":
-                        print("Welcome Root USer")
+if __name__ == "__main__":
+                    
+    while True:
+        print ("1. Create Account: ")
+        print ("2. Login: ")
+        print ("3. Quit: ")
 
-                        while True:
-                            print("Welcome to ROOT DASHBOARD FN: ")
-                            print("1. View All Users: ")
-                            print("2. View User Details: ")
-                            print("3. Lock / Unlock User: ")
-                            print("4. Delete user: ")
-                            print("5. Rename User: ")
-                            print("6. Change User Role: ")
-                            print("7. Reset User Password: ")
-                            print("8. Logout: ")
+        choice = input("Choose an option: ")
 
-                            root_choice = input("Choose a root option fn: ")
+        if choice == "1":
 
-                            if root_choice == "1":
-                                view_all_users()
-                            elif root_choice == "2":
-                                view_user_details()
-                            elif root_choice == "3":
-                                lock_unlock_user(iinput)
-                            elif root_choice == "4":
-                                delete_user()
-                            elif root_choice == "5":
-                                iinput = rename_user(iinput)
-                            elif root_choice == "6":
-                                change_user_role()
-                            elif root_choice == "7":
-                                password_reset(iinput)
-                            elif root_choice == "8":
-                                logged_in = False
-                                break
+            username_new = input("Create a username fn: ")
 
-                    elif users[iinput]["role"] == "admin":
-                        print("what up admin user")
+            if username_new in users:
+                print ("thats an invalid name u cant use it")
+            else:
+                
+                print ("thats allowed proceed fn")
+                while True:
+                    password_new = input("Now create a password fn: ")
+                    if validate_password(password_new):
+                        users[username_new] = {
+                            "password" : password_hash(password_new),
+                            "attempts" : 0,
+                            "locked" : False,
+                            "role" : "user",
+                            "last_login" : None
+                        }
+                        save_users(users)
 
-                        while True:
-                            print("Welcome to admin dashboard fn")
-                            print("1. View all users:")
-                            print("2. Inspect User detials:")
-                            print("3. Lock / Unlock regular users: ")
-                            print("4. Reset Regular Users Passwords: ")
-                            print("5. Rename Regular Users: ")
-                            print("6. View Locked accounts")
-                            print("7. Logout: ")
+                        print(f"Account {username_new} created succesfully")
+                        break
 
-                            admin_choice = input("Pick an option fn")
+                    else:
+                        print("Password reuqiemrents failed")
+                    
+                
+        elif choice == "2":
+            logged_in = False
 
-                            if admin_choice == "1":
-                                view_all_users()
-                            elif admin_choice == "2":
-                                view_user_details()
-                            elif admin_choice == "3":
-                                lock_unlock_user(iinput)
-                            elif admin_choice == "4":
-                                password_reset(iinput)
-                            elif admin_choice == "5":
-                                iinput = rename_user(iinput)
-                            elif admin_choice == "6":
-                                view_locked_users()
-                            elif admin_choice == "7":
-                                logged_in = False
-                                break
+            iinput = input("Hi plz enter your username to continue: ")
+            if iinput in users:
 
-                    elif users[iinput]["role"] == "user":
-                        print("user acces get your money up")
+                if users[iinput]["locked"]:
+                    print("account locked lil bruh")
+                    continue
+
+                while users[iinput]["attempts"] < max_retries:
+                    entered_password = input("Awesome now enter your password: ")
+                    stored_hash = users[iinput]["password"]
+
+                    if verify_password(entered_password, stored_hash):
+                        print("sucess")
+                        users[iinput]["attempts"] = 0
+                        users[iinput]["last_login"] = datetime.now(timezone.utc).isoformat()
+
+                        logged_in = True
+                        save_users(users)
 
 
-                        while True:
-                            print("Welcome User ")
-                            print("1. View my profile: ")
-                            print("2. Change my Password: ")
-                            print("3. Rename my account: ")
-                            print("4. View Login / Account status: ")
-                            print("5. Logout: ")
+
+                        if users[iinput]["role"] == "root":
+                            print("Welcome Root USer")
+
+                            while True:
+                                print("Welcome to ROOT DASHBOARD FN: ")
+                                print("1. View All Users: ")
+                                print("2. View User Details: ")
+                                print("3. Lock / Unlock User: ")
+                                print("4. Delete user: ")
+                                print("5. Rename User: ")
+                                print("6. Change User Role: ")
+                                print("7. Reset User Password: ")
+                                print("8. Logout: ")
+
+                                root_choice = input("Choose a root option fn: ")
+
+                                if root_choice == "1":
+                                    view_all_users()
+                                elif root_choice == "2":
+                                    view_user_details()
+                                elif root_choice == "3":
+                                    lock_unlock_user(iinput)
+                                elif root_choice == "4":
+                                    delete_user()
+                                elif root_choice == "5":
+                                    iinput = rename_user(iinput)
+                                elif root_choice == "6":
+                                    change_user_role()
+                                elif root_choice == "7":
+                                    password_reset(iinput)
+                                elif root_choice == "8":
+                                    logged_in = False
+                                    break
+
+                        elif users[iinput]["role"] == "admin":
+                            print("what up admin user")
+
+                            while True:
+                                print("Welcome to admin dashboard fn")
+                                print("1. View all users:")
+                                print("2. Inspect User detials:")
+                                print("3. Lock / Unlock regular users: ")
+                                print("4. Reset Regular Users Passwords: ")
+                                print("5. Rename Regular Users: ")
+                                print("6. View Locked accounts")
+                                print("7. Logout: ")
+
+                                admin_choice = input("Pick an option fn")
+
+                                if admin_choice == "1":
+                                    view_all_users()
+                                elif admin_choice == "2":
+                                    view_user_details()
+                                elif admin_choice == "3":
+                                    lock_unlock_user(iinput)
+                                elif admin_choice == "4":
+                                    password_reset(iinput)
+                                elif admin_choice == "5":
+                                    iinput = rename_user(iinput)
+                                elif admin_choice == "6":
+                                    view_locked_users()
+                                elif admin_choice == "7":
+                                    logged_in = False
+                                    break
+
+                        elif users[iinput]["role"] == "user":
+                            print("user acces get your money up")
 
 
-                            user_choice = input("Pick an option fn: ")
-
-                            if user_choice == "1":
-                                 print(f"Username | {iinput}")
-                                 print(f"Role | {users[iinput]['role']}")
-
-                            elif user_choice == "2":
-                                change_own_password(iinput)
-
-                            elif user_choice == "3":
-                                iinput = rename_user(iinput)
-
-                            elif user_choice == "4":
-                                view_account_status(iinput)
+                            while True:
+                                print("Welcome User ")
+                                print("1. View my profile: ")
+                                print("2. Change my Password: ")
+                                print("3. Rename my account: ")
+                                print("4. View Login / Account status: ")
+                                print("5. Logout: ")
 
 
-                            elif user_choice == "5":
-                                logged_in = False
-                                break
+                                user_choice = input("Pick an option fn: ")
 
-                    break
+                                if user_choice == "1":
+                                    print(f"Username | {iinput}")
+                                    print(f"Role | {users[iinput]['role']}")
 
-                else:
-                    users[iinput]["attempts"] += 1
-                    print("failure try again fn")
-                    print(f"you have this many attempts left {max_retries - users[iinput]['attempts']}")
+                                elif user_choice == "2":
+                                    change_own_password(iinput)
 
-            if logged_in == False and users[iinput]["attempts"] == max_retries:
-                print("Your account is locked fn contact an admin bruh")
-                users[iinput]["locked"] = True
+                                elif user_choice == "3":
+                                    iinput = rename_user(iinput)
 
-        else:
-            print("Invalid username fn")
+                                elif user_choice == "4":
+                                    view_account_status(iinput)
 
-    elif choice == "3":
-        quitchoice = input("Are u sure you want y/n: ")
-        if quitchoice != "n":
-            print ("peace lil bruh")
-            break
+
+                                elif user_choice == "5":
+                                    logged_in = False
+                                    break
+
+                        break
+
+                    else:
+                        users[iinput]["attempts"] += 1
+                        save_users(users)
+                        print("failure try again fn")
+                        print(f"you have this many attempts left {max_retries - users[iinput]['attempts']}")
+                        
+
+                if logged_in == False and users[iinput]["attempts"] == max_retries:
+                    print("Your account is locked fn contact an admin bruh")
+                    users[iinput]["locked"] = True
+                    save_users(users)
+
+            else:
+                print("Invalid username fn")
+
+        elif choice == "3":
+            quitchoice = input("Are u sure you want y/n: ")
+            if quitchoice != "n":
+                print ("peace lil bruh")
+                break
