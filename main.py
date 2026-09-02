@@ -5,8 +5,6 @@ import json
 import copy
 
 
-print("Welcome to login system fn")
-
 max_retries = 3
 logged_in = False
 
@@ -293,6 +291,9 @@ users = load_users()
     
 
 if __name__ == "__main__":
+
+    print("Welcome to login system fn")
+
                     
     while True:
         print ("1. Create Account: ")
