@@ -4,6 +4,15 @@ from main import authenticate_user
 from datetime import datetime, timezone
 import pytest
 
+from fastapi.testclient import TestClient
+from api import app
+import api
+
+
+
+
+
+
 @pytest.fixture
 def fake_users():
     fresh_fake_users = {
@@ -80,6 +89,57 @@ def test_locked_user(fake_users):
     assert fake_users["testsuser"]["locked"] == True
 
 
+
+
+
+client = TestClient(app)
+def test_health_endpoint():
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.json()["status"] == "healthy"
+
+def test_login_success(fake_users, monkeypatch):
+    monkeypatch.setattr(
+        api, "users", fake_users
+    )
+
+    data = {
+        "username": "testsuser",
+        "password": "HYacinth@@1233"
+    }
+    response = client.post( "/login", json=data
+    )
+    assert response.status_code == 200
+    assert response.json()["authenticated"] == True
+    assert response.json()["username"] == "testsuser"
+    assert response.json()["role"] == "root"
+def test_login_failure(fake_users, monkeypatch):
+    monkeypatch.setattr(
+        api, "users", fake_users
+    )
+
+    data = {
+        "username" : "testsuser",
+        "password" : "Hyacinnth@123"
+        }
+    response = client.post("/login", json=data
+    )
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid Credentials"
+def test_login_structure():
+    
+    data = {
+        "username" : "testsuser"
+    }
+    response = client.post("/login", json=data)
+    assert response.status_code == 422
+
+
+
+
+
+
+    
 
 
 
