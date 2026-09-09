@@ -3,6 +3,9 @@ import bcrypt
 from datetime import datetime, timezone
 import json
 import copy
+import logging 
+
+logger = logging.getLogger(__name__)
 
 
 max_retries = 3
@@ -21,6 +24,30 @@ default_users = {
 
 
     }
+
+audit_log = []
+
+def add_audit_event(current_user, event_type, target=None):
+    audit_changes = { "timestamp": datetime.now(timezone.utc).isoformat(),
+                     "actor" : current_user,
+                     "event" : event_type,
+                     "target user" : target,
+    }
+    audit_log.append(audit_changes)
+
+def view_audit_log(current_user, users):
+    if users[current_user]["role"] == "root":
+        if not audit_log:
+            print("There is no events to be seen")
+        for event in audit_log:
+            print(event["timestamp"])
+            print(event["event"])
+            print(event["actor"])
+            print(event["target user"])
+    else:
+        print("you aint got permission bruh")
+           
+
 
 def view_all_users():
     for key in users:
@@ -49,6 +76,7 @@ def lock_unlock_user(current_user):
                 if status_change == "y":
                     users[target_user_unlock]['locked'] = True
                     save_users(users)
+                    add_audit_event(current_user, "ACCOUNT LOCKED", target_user_unlock)
                     print("this user is now officialy locked")
                 else:
                     print("aint ***** change bruh")
@@ -58,6 +86,7 @@ def lock_unlock_user(current_user):
                     users[target_user_unlock]['locked'] = False
                     users[target_user_unlock]['attempts'] = 0
                     save_users(users)
+                    add_audit_event(current_user, "ACCOUNT UNLOCKED", target_user_unlock)
                     print ("This user officially unlocked and attempts are reset now kick rocks")
                 else:
                     print("aint ***** change bruh")
@@ -86,6 +115,7 @@ def password_reset(current_user):
                         if confirm_admin_passwd_change == admin_passwd_change:
                             users[target_password_reset]["password"] = password_hash(admin_passwd_change)
                             save_users(users)
+                            add_audit_event(current_user, "PASSWORD RESET", target_password_reset)
                             print("Password is now chnaged")
                             break
                         else:
@@ -150,7 +180,7 @@ def view_locked_users():
         
     if found_locked == False:
         print("No locked users")
-def delete_user():
+def delete_user(current_user):
     delete_target_user = input("Yo fn who you tryna delet: ")
     if delete_target_user in users:
         if users[delete_target_user]["role"] == "root":
@@ -160,13 +190,15 @@ def delete_user():
             if confirm_user_delete == "Y":
                 del users[delete_target_user]
                 save_users(users)
+                add_audit_event(current_user,"ACCOUNT DELETED", delete_target_user)
+                logger.info(f"User {delete_target_user} is deleted ")
                 print(f"user{delete_target_user} is succeffuly gone")
             else:
                 print("canceled operation")
 
     else:
         print("User not found")
-def change_user_role():
+def change_user_role(current_user):
     print("Here is a list of all users and their assigned roles: ")
     for key in users:
         print(f"username: {key} | role: {users[key]['role']}")
@@ -191,8 +223,11 @@ def change_user_role():
                     if confirm_role_change == "n":
                             print("canceling make up your mind next time fn")
                     elif confirm_role_change == "y":
+                            old_role = users[change_user_target_role]["role"]
                             users[change_user_target_role]["role"] = new_roles
                             save_users(users)
+                            add_audit_event(current_user, "Role_Change", change_user_target_role)
+                            logger.info(f"role changeed for {change_user_target_role} (old){old_role} -> (new){new_roles}")
         else:
                 print("My brother in Christ you CANNOT modify another root user role")
     else:
@@ -265,11 +300,17 @@ def authenticate_user(users, username, entered_password):
             if verify_password(entered_password, users[username]["password"]):
                 users[username]["attempts"] = 0
                 users[username]["last_login"] = datetime.now(timezone.utc).isoformat()
+                add_audit_event(username, "LOGIN SUCCESS")
+                logger.info(f"Succesful login: {username}")
                 return True
             else:
                 users[username]["attempts"] += 1
+                add_audit_event(username, "LOGIN FAILURE")
+                logger.warning(f"Wrong password attempt on {username}")
                 if users[username]["attempts"] >= 3:
                     users[username]["locked"] = True
+                    add_audit_event(username, "ACCOUNT LOCKED")
+                    logger.warning(f"Account is now locked for this user {username}")
                     return False
                 else:
                     return False
@@ -322,7 +363,8 @@ if __name__ == "__main__":
                             "last_login" : None
                         }
                         save_users(users)
-
+                        logger.info(f"Account created{username_new}")
+                        add_audit_event(username_new, "ACCOUNT CREATED")
                         print(f"Account {username_new} created succesfully")
                         break
 
@@ -363,7 +405,8 @@ if __name__ == "__main__":
                             print("5. Rename User: ")
                             print("6. Change User Role: ")
                             print("7. Reset User Password: ")
-                            print("8. Logout: ")
+                            print("8. View Audit Log")
+                            print("9. Logout: ")
 
                             root_choice = input("Choose a root option fn: ")
 
@@ -374,14 +417,16 @@ if __name__ == "__main__":
                             elif root_choice == "3":
                                 lock_unlock_user(iinput)
                             elif root_choice == "4":
-                                delete_user()
+                                delete_user(iinput)
                             elif root_choice == "5":
                                 iinput = rename_user(iinput)
                             elif root_choice == "6":
-                                change_user_role()
+                                change_user_role(iinput)
                             elif root_choice == "7":
                                 password_reset(iinput)
                             elif root_choice == "8":
+                                view_audit_log(iinput, users)
+                            elif root_choice == "9":
                                 logged_in = False
                                 break
 

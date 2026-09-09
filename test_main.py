@@ -1,6 +1,6 @@
 from main import validate_password, password_hash, verify_password
 from main import save_users, load_users
-from main import authenticate_user
+from main import authenticate_user, add_audit_event, audit_log
 from datetime import datetime, timezone
 import pytest
 
@@ -133,6 +133,37 @@ def test_login_structure():
     }
     response = client.post("/login", json=data)
     assert response.status_code == 422
+
+def test_proper_login_failure_logging(fake_users, caplog):
+    username = "testsuser"
+    authenticate_user(fake_users, "testsuser", "hyacinnth")
+    assert(f"Wrong password attempt on {username}")in caplog.text
+def test_proper_lockout_logging(fake_users, caplog):
+    username = "testsuser"
+    fake_users[username]["attempts"] = 2
+    authenticate_user(fake_users, username, "hyacinnth")
+    assert fake_users[username]["attempts"] == 3
+    assert fake_users[username]["locked"] == True
+    assert(f"Account is now locked for this user {username}") in caplog.text
+def test_audit_logging():
+    audit_log.clear()
+    add_audit_event("helen", "ROLE CHANGE", "testsuser")
+    assert audit_log[0]["actor"] == "helen"
+    assert audit_log[0]["event"] == "ROLE CHANGE"
+    assert audit_log[0]["target user"] == "testsuser"
+    assert "timestamp" in audit_log[0]
+def test_successful_login_audit(fake_users):
+    audit_log.clear()
+
+    login_result = authenticate_user(
+        fake_users,
+        "testsuser",
+        "HYacinth@@1233"
+    )
+
+    assert login_result == True
+    assert audit_log[0]["event"] == "LOGIN SUCCESS"
+    assert audit_log[0]["actor"] == "testsuser"
 
 
 
