@@ -138,12 +138,14 @@ def test_proper_login_failure_logging(fake_users, caplog):
     username = "testsuser"
     authenticate_user(fake_users, "testsuser", "hyacinnth")
     assert(f"Wrong password attempt on {username}")in caplog.text
+    assert any(record.levelname == "WARNING" for record in caplog.records)
 def test_proper_lockout_logging(fake_users, caplog):
     username = "testsuser"
     fake_users[username]["attempts"] = 2
     authenticate_user(fake_users, username, "hyacinnth")
     assert fake_users[username]["attempts"] == 3
     assert fake_users[username]["locked"] == True
+    assert any(record.levelname == "WARNING" for record in caplog.records)
     assert(f"Account is now locked for this user {username}") in caplog.text
 def test_audit_logging():
     audit_log.clear()
