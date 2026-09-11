@@ -28,6 +28,12 @@ if sentry_dsn:
         dsn = sentry_dsn
     )
 
+    
+
+
+
+
+
 
 class LoginRequest(BaseModel):
     username: str
@@ -49,18 +55,13 @@ def login(login_data: LoginRequest):
             status_code= 401, 
             detail= "Invalid Credentials"
         )
-        
-
-
-
-
-
-
-
+    
 @app.get("/health")
 def health_check():
     return {
         "status": "healthy"
     }
 
-    
+@app.get("/sentry-debug")
+def sentry_debug():
+    1/0
