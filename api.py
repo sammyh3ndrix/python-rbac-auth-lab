@@ -61,7 +61,3 @@ def health_check():
     return {
         "status": "healthy"
     }
-
-@app.get("/sentry-debug")
-def sentry_debug():
-    1/0
