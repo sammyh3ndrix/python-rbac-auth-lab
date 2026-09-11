@@ -1,0 +1,25 @@
+name: Run on push to Main
+
+on:
+  push:
+      branches:
+        - main
+
+defaults:
+  run:
+      shell: bash
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get code on actual machine
+        uses: actions/checkout@v4
+      - name: Run Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.14.3
+        
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: running actual program
+        run: pytest -v
